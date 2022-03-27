@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <h1>Simple Flappy Bird</h1>
+    <div>
+        <a href="https://www.tiktok.com/@idkncc">@idkncc</a>
+        •
+        <a href="https://github.com/Mon4ik/simple-flappy-bird">Repository</a>
+    </div>
+    <hr width="400" style="float: left;"><br>
+    <canvas id="canvas" width="400" height="600" style="border: solid">
+        Your browser doesn't support &lt;Canvas&gt;
+    </canvas>
+    <script>
+        const ctx_tag = document.querySelector("#canvas")
+        const ctx = ctx_tag.getContext("2d")
+
+        const ctx_w = 400
+        const ctx_h = 600
+
+        const pl_x = 80
+        const gravity = 0.2
+
+        window.score = -1
+        localStorage.RECORD ||= 0
+        let got_score = false
+
+        let column_x = ctx_w
+        let column = []
+        /*
+            [ctx_h, 50, -(ctx_h * 0.55)]
+            [0, 50, (ctx_h * 0.30)]
+        */
+        let ax = 0
+
+        let yVelocity = 0
+
+        let pl_y = ctx_h / 2
+
+        let died = false
+        let step = 0
+
+        /*
+         0 - MENU
+         1 - GAME
+        */
+
+
+        t = Date.now()
+
+        function generateColumns() {
+            h = rand(0.15, 0.65)
+
+            column1 = [ctx_h - (ctx_h * h), 50, ctx_h]
+            column2 = [0, 50, ctx_h * (1 - h - 0.30)]
+
+            column = [column1, column2]
+        }
+
+        function isCollide(a, b) {
+            return !(
+                ((a.y + a.height) < (b.y)) ||
+                (a.y > (b.y + b.height)) ||
+                ((a.x + a.width) < b.x) ||
+                (a.x > (b.x + b.width))
+            );
+        }
+
+        function rand(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        function menu_loop() {
+            ctx.clearRect(0, 0, ctx_w, ctx_h)
+            ctx.fillStyle = "black"
+            ctx.strokeStyle = 'black';
+
+            ctx.beginPath()
+            dt = (Date.now() - t) / 1000
+            ctx.font = "15px Arial"
+            ctx.fillText(`FPS: ${Math.round(1 / dt)}`, 15, 15)
+
+            if (window.score != -1) {
+                ctx.beginPath()
+                ctx.font = "35px Arial"
+                ctx.fillText(`Last score: ${window.score}`, ctx_w / 4, 120)
+            }
+
+            ctx.beginPath()
+            ctx.font = "35px Arial"
+            ctx.fillText(`Record: ${localStorage.RECORD}`, ctx_w / 4 + 20, 155)
+
+
+            ctx.beginPath()
+            ctx.font = "35px Arial"
+            ctx.fillText(`Click for start`, ctx_w / 4, ctx_h - 50)
+
+            ctx.beginPath()
+            ctx.rect(pl_x, pl_y, 50, 50)
+            ctx.fillStyle = "yellow"
+            ctx.strokeStyle = "1px black"
+            ctx.fill()
+            ctx.stroke()
+
+
+        }
+
+
+        function game_loop() {
+            ctx.clearRect(0, 0, ctx_w, ctx_h)
+            ctx.fillStyle = "black"
+            ctx.strokeStyle = 'black';
+
+            ctx.beginPath()
+            dt = (Date.now() - t) / 1000
+            ctx.font = "15px Arial"
+            ctx.fillText(`FPS: ${Math.round(1 / dt)}`, 15, 15)
+
+            ctx.beginPath()
+            ctx.font = "20px Arial"
+            ctx.fillText(`Score: ${window.score}`, ctx_w / 2 - 50, 30)
+
+            // Draw columns
+            column.forEach((c) => {
+                ctx.beginPath()
+                let [y, w, h] = c
+
+                ctx.rect(column_x - ax, y, w, h)
+                ctx.fill()
+            })
+
+
+            // Draw player
+            ctx.beginPath()
+
+            ctx.rect(pl_x, pl_y, 50, 50)
+
+            if (died) {
+                ctx.fillStyle = "red"
+            } else {
+                ctx.fillStyle = "yellow"
+            }
+            ctx.strokeStyle = "1px black"
+            ctx.fill()
+            ctx.stroke()
+
+            ax += 120 * dt
+            pl_y += yVelocity
+
+            if (yVelocity != 0) yVelocity += gravity
+
+            if (column_x - ax <= -50) {
+                generateColumns()
+                ax = 0
+                got_score = false
+            }
+
+            if (pl_y >= ctx_h) {
+                died = true
+                pl_y = ctx_h / 2
+
+                if (window.score > localStorage.RECORD) {
+                    localStorage.RECORD = window.score
+                }
+
+                generateColumns()
+                ax = 0
+                step = 0
+            }
+
+            if (column_x - ax <= pl_x && column_x - ax + 50 >= pl_x && !died && !got_score) {
+                window.score++
+                got_score = true
+            }
+
+            column.forEach((c) => {
+                let [y, w, h] = c
+                let x = column_x - ax
+
+                if ((isCollide({
+                        x,
+                        y,
+                        width: w,
+                        height: h
+                    }, {
+                        x: pl_x,
+                        y: pl_y,
+                        width: 50,
+                        height: 50
+                    }) || pl_y <= 0 )&& !died) {
+                    console.log("Bird is ded insaid");
+                    console.log("It's bad :(")
+                    yVelocity = -5
+                    died = true
+                }
+            })
+        }
+
+        function loop() {
+            if (step == 0) {
+                menu_loop()
+            } else if (step == 1) {
+                game_loop()
+            }
+
+            t = Date.now()
+            window.requestAnimationFrame(loop)
+        }
+
+        window.onload = () => {
+            generateColumns()
+
+            loop()
+        }
+
+        ctx_tag.addEventListener("click", (e) => {
+            if (step == 0) {
+                died = false
+                yVelocity = -5
+
+                window.score = 0
+                step = 1
+            } else if (step == 1) {
+                if (!died) yVelocity = -5
+            }
+        })
+    </script>
+
+</body>
+
+</html>
